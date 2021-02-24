@@ -1,51 +1,50 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"strings"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mcaci/login/db"
-)
-
-var (
-	ListenAddr = "localhost:8080"
-	RedisAddr  = "localhost:6379"
+	"github.com/mcaci/login/route"
 )
 
 func main() {
-	database, err := db.NewDatabase(RedisAddr)
+	cliURL := flag.String("url", "localhost", "URL of the login server. Default: localhost.")
+	cliPort := flag.String("port", "8080", "Port of the login server. Default: 8080.")
+	redisURL := flag.String("redis-url", "localhost", "URL of redis server. Default: localhost.")
+	redisPort := flag.String("redis-port", "6379", "Port of redis server. Default: 6379.")
+	flag.Parse()
+
+	name := "hello"
+	name = strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			return unicode.ToLower(r)
+		case r >= 'a' && r <= 'z',
+			unicode.IsDigit(r),
+			r == '.',
+			r == '-':
+			return r
+		default:
+			return '-' // or 0 if you want to replace with 'empty' char
+		}
+	}, name)
+	name = strings.TrimFunc(name, func(r rune) bool {
+		return !unicode.IsLower(r) && !unicode.IsNumber(r)
+	})
+
+	database, err := db.NewDatabase(fmt.Sprintf("%s:%s", *redisURL, *redisPort))
 	if err != nil {
-		log.Fatalf("failed to connect to redis: %v", err)
+		log.Fatalf("Failed to connect to redis: %s", err.Error())
 	}
-
-	router := initRouter(database)
-	router.Run(ListenAddr)
-	// log.Println(database.Client.Set(db.Ctx, "language", "Go", 0))
-	// log.Println(database.Client.Get(db.Ctx, "year"))
-	// log.Println(database.Client.Get(db.Ctx, "language"))
-	// log.Println(database.Client.Del(db.Ctx, "language"))
-
-	// pipe := database.Client.TxPipeline()
-	// pipe.Set(db.Ctx, "language", "golang", 0)
-	// pipe.Set(db.Ctx, "year", 2009, 0)
-	// results, err := pipe.Exec(db.Ctx)
-	// log.Println(results)
-}
-
-func initRouter(database *db.Database) *gin.Engine {
-	r := gin.Default()
-	r.POST("/set/:lang", func(c *gin.Context) {
-		lang := c.Param("lang")
-		log.Print(database.Client.Set(db.Ctx, "language", lang, 0))
-	})
-	r.POST("/setgo", func(c *gin.Context) {
-		log.Print(database.Client.Set(db.Ctx, "language", "go", 0))
-	})
-	r.GET("/get", func(c *gin.Context) {
-		log.Print(database.Client.Get(db.Ctx, "language"))
-	})
-	r.POST("/del", func(c *gin.Context) {
-		log.Print(database.Client.Del(db.Ctx, "language"))
-	})
-	return r
+	router := gin.Default()
+	route.Apply(
+		route.NewDescr(router.POST, "/register", route.Handle(database, route.WithRegisterHandler)),
+		route.NewDescr(router.POST, "/login", route.Handle(database, route.WithLoginHandler)),
+	)
+	router.Run(fmt.Sprintf("%s:%s", *cliURL, *cliPort))
 }

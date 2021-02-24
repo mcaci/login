@@ -18,7 +18,7 @@ var (
 
 func NewDatabase(address string) (*Database, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     address,
 		Password: "",
 		DB:       0,
 	})
