@@ -36,7 +36,7 @@ func WithLoginHandler(bind func(interface{}) error, database *db.Database) (int,
 		return http.StatusInternalServerError, gin.H{"error": err.Error()}
 	}
 	if user.Password != userJSON.Password {
-		return http.StatusInternalServerError, gin.H{"error": "Incorrect username or password"}
+		return http.StatusUnauthorized, gin.H{"error": "Incorrect username or password"}
 	}
 	return http.StatusOK, gin.H{"logged as": userJSON.Username}
 }
