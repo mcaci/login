@@ -1,4 +1,4 @@
-# Login example with redis
+# Login example with redis and test with Auth0
 
 Launch redis cluster
 
@@ -23,6 +23,7 @@ or
 curl -H "Content-type: application/json" -d '{"username": "isa", "password": "test"}' localhost:8080/register
 curl -H "Content-type: application/json" -d '{"username": "isa", "password": "test"}' localhost:8080/login
 curl localhost:8080/welcome
+curl -i localhost:8080/private-welcome --header 'authorization: Bearer $TOKEN'
 ```
 
 reference: <https://blog.logrocket.com/how-to-use-redis-as-a-database-with-go-redis/>
